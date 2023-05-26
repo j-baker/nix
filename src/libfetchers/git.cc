@@ -203,6 +203,8 @@ WorkdirInfo getWorkdirInfo(const Input & input, const Path & workdir)
 std::pair<StorePath, Input> fetchFromWorkdir(ref<Store> store, Input & input, const Path & workdir, const WorkdirInfo & workdirInfo)
 {
     const bool submodules = maybeGetBoolAttr(input.attrs, "submodules").value_or(false);
+    auto checkedOutDir = maybeGetStrAttr(input.attrs, "dir").value_or("");
+
     auto gitDir = ".git";
 
     if (!fetchSettings.allowDirty)
@@ -214,6 +216,10 @@ std::pair<StorePath, Input> fetchFromWorkdir(ref<Store> store, Input & input, co
     auto gitOpts = Strings({ "-C", workdir, "--git-dir", gitDir, "ls-files", "-z" });
     if (submodules)
         gitOpts.emplace_back("--recurse-submodules");
+    if (checkedOutDir) {
+        gitOpts.emplace_back("--");
+        gitOpts.emplace_back(checkedOutDir);
+    }
 
     auto files = tokenizeString<std::set<std::string>>(
         runProgram("git", true, gitOpts), "\0"s);
